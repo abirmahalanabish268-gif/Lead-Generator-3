@@ -1,0 +1,3 @@
+# This file keeps the public/demo/ directory tracked by git.
+# The actual .html demo files in this folder are git-ignored (runtime artifacts).
+# They are generated automatically by the backend engine when you run the pipeline.

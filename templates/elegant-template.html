@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{BUSINESS_NAME}} | Premium Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3d0101; /* Dark Red */
+            --secondary: #5e0a0a; /* Medium Red */
+            --accent: #f2e8cf; /* Beige */
+            --text-light: #f2e8cf;
+            --text-dark: #3d0101;
+            --white: #ffffff;
+            --transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--accent);
+            color: var(--text-dark);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3 {
+            font-family: 'DM+Serif+Display', serif;
+            font-weight: 400;
+        }
+
+        /* --- Components --- */
+        .section {
+            padding: 100px 5%;
+            max-width: 1400px;
+            margin: 0 auto;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: var(--transition);
+        }
+
+        .section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 35px;
+            background-color: var(--primary);
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            border: 1px solid var(--primary);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background-color: transparent;
+            color: var(--primary);
+        }
+
+        /* --- Header --- */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 30px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            transition: var(--transition);
+        }
+
+        header.scrolled {
+            background: var(--primary);
+            padding: 15px 5%;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-family: 'DM+Serif+Display', serif;
+            font-size: 1.5rem;
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        /* --- Hero --- */
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: linear-gradient(rgba(61, 1, 1, 0.6), rgba(61, 1, 1, 0.6)), url('{{HERO_BG_IMAGE}}');
+            background-size: cover;
+            background-position: center;
+            color: var(--text-light);
+            position: relative;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            padding: 0 20px;
+        }
+
+        .hero h1 {
+            font-size: clamp(3rem, 8vw, 6rem);
+            margin-bottom: 20px;
+            line-height: 1;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            font-weight: 300;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* --- About --- */
+        .about-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+        }
+
+        .about-image {
+            height: 600px;
+            background: url('{{ABOUT_IMAGE}}');
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .about-image::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: -20px;
+            width: 100%;
+            height: 100%;
+            border: 2px solid var(--primary);
+            z-index: -1;
+        }
+
+        .about-text h2 {
+            font-size: 3rem;
+            margin-bottom: 30px;
+            color: var(--primary);
+        }
+
+        .about-text p {
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            color: #555;
+        }
+
+        /* --- Services --- */
+        .services-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .services-header h2 {
+            font-size: 3rem;
+            color: var(--primary);
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+
+        .service-card {
+            background: var(--white);
+            padding: 50px 40px;
+            text-align: center;
+            border: 1px solid rgba(61, 1, 1, 0.05);
+            transition: var(--transition);
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(61, 1, 1, 0.08);
+        }
+
+        .service-icon {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 25px;
+            display: block;
+        }
+
+        .service-card h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
+
+        /* --- Gallery --- */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            height: 500px;
+        }
+
+        .gallery-item {
+            background-size: cover;
+            background-position: center;
+            transition: var(--transition);
+            filter: grayscale(20%);
+        }
+
+        .gallery-item:hover {
+            filter: grayscale(0%);
+            transform: scale(1.02);
+        }
+
+        /* --- Contact --- */
+        .contact {
+            background-color: var(--primary);
+            color: var(--accent);
+            text-align: center;
+        }
+
+        .contact h2 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .contact p {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            opacity: 0.8;
+        }
+
+        .contact-info {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            margin-top: 60px;
+            flex-wrap: wrap;
+        }
+
+        .info-item h4 {
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+            opacity: 0.6;
+        }
+
+        /* --- Footer --- */
+        footer {
+            padding: 40px 5%;
+            text-align: center;
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(61, 1, 1, 0.1);
+        }
+
+        /* --- Responsive --- */
+        @media (max-width: 968px) {
+            .about-grid { grid-template-columns: 1fr; gap: 40px; }
+            .about-image { height: 400px; }
+            .gallery-grid { grid-template-columns: 1fr; height: auto; }
+            .gallery-item { height: 300px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header id="header">
+        <a href="#" class="logo">{{BUSINESS_NAME}}</a>
+        <nav>
+            <!-- Navigation items could be added here -->
+        </nav>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <p>{{HERO_SUBTEXT}}</p>
+            <h1>{{HERO_TITLE}}</h1>
+            <a href="#contact" class="btn">Experience Now</a>
+        </div>
+    </section>
+
+    <section class="section" id="about">
+        <div class="about-grid">
+            <div class="about-image"></div>
+            <div class="about-text">
+                <h2>{{ABOUT_TITLE}}</h2>
+                <p>{{ABOUT_TEXT}}</p>
+                <a href="#" class="btn">Read Our Story</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="services">
+        <div class="services-header">
+            <h2>Our Expertise</h2>
+        </div>
+        <div class="services-grid">
+            <div class="service-card">
+                <span class="service-icon">{{SERVICE_1_ICON}}</span>
+                <h3>{{SERVICE_1_TITLE}}</h3>
+                <p>{{SERVICE_1_DESC}}</p>
+            </div>
+            <div class="service-card">
+                <span class="service-icon">{{SERVICE_2_ICON}}</span>
+                <h3>{{SERVICE_2_TITLE}}</h3>
+                <p>{{SERVICE_2_DESC}}</p>
+            </div>
+            <div class="service-card">
+                <span class="service-icon">{{SERVICE_3_ICON}}</span>
+                <h3>{{SERVICE_3_TITLE}}</h3>
+                <p>{{SERVICE_3_DESC}}</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="gallery">
+        <div class="gallery-grid">
+            <div class="gallery-item" style="background-image: url('{{GALLERY_IMG_1}}');"></div>
+            <div class="gallery-item" style="background-image: url('{{GALLERY_IMG_2}}');"></div>
+            <div class="gallery-item" style="background-image: url('{{GALLERY_IMG_3}}');"></div>
+        </div>
+    </section>
+
+    <section class="section contact" id="contact">
+        <h2>Join Us</h2>
+        <p>Book your experience at {{BUSINESS_NAME}} today.</p>
+        <a href="#" class="btn" style="background: var(--accent); color: var(--primary);">Book Now</a>
+        
+        <div class="contact-info">
+            <div class="info-item">
+                <h4>Location</h4>
+                <p>{{CONTACT_ADDRESS}}</p>
+            </div>
+            <div class="info-item">
+                <h4>Call</h4>
+                <p>{{CONTACT_PHONE}}</p>
+            </div>
+            <div class="info-item">
+                <h4>Email</h4>
+                <p>{{CONTACT_EMAIL}}</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2024 {{BUSINESS_NAME}}. All rights reserved. Crafted by Byters.</p>
+    </footer>
+
+    <script>
+        // Scroll Effect for Header
+        window.addEventListener('scroll', () => {
+            const header = document.getElementById('header');
+            if (window.scrollY > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+
+        // Intersection Observer for Reveal Animations
+        const observerOptions = {
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Smooth Scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>
