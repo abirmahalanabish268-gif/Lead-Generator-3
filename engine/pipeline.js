@@ -3,26 +3,18 @@ import { getLeadsByState, getTopLeads, updateLeadState, saveDemoUrl } from './db
 import { evaluateLead } from './groq.js';
 import { generateDemo } from './demoGenerator.js';
 
-const EVALUATION_BATCH_SIZE = 30; // Max leads to evaluate per run
-const TOP_LEADS_COUNT = 10;       // Top leads to surface + generate demos for
+const EVALUATION_BATCH_SIZE = 30;
+const TOP_LEADS_COUNT = 10;
 
-/**
- * Phase 3 Pipeline
- * fetch → normalize → dedupe → store
- * → select batch → evaluate (Groq) → validate → update
- * → select top leads → generate demo websites → store demo_url
- */
-/**
- * Final Production Pipeline
- * @param {object} options { category, city, maxLeads, dryRun }
- */
-export async function runPipeline(category, city, maxLeads = 50, options = {}) {
+export async function runPipeline(categories, city, maxLeads = 30, options = {}) {
   const isDryRun = options.dryRun || false;
+
+  const categoryList = Array.isArray(categories) ? categories : [categories];
 
   console.log('🌊 STARTING PRODUCTION PIPELINE 🌊');
   if (isDryRun) console.log('🛡️  MODE: DRY RUN (Simulating only, no writes)\n');
   
-  console.log(`Target: ${category} in ${city} | Scrape: ${maxLeads} | Eval Batch: ${EVALUATION_BATCH_SIZE}\n`);
+  console.log(`Categories: ${categoryList.join(', ')} | City: ${city} | Exact: ${maxLeads} leads\n`);
 
   const stats = {
     scraped:   0,
@@ -36,17 +28,24 @@ export async function runPipeline(category, city, maxLeads = 50, options = {}) {
   // ─────────────────────────────────────────────
   // STEP 1: Scrape & Ingest
   // ─────────────────────────────────────────────
-  console.log('--- STEP 1: SCRAPE & INGEST ---');
+  console.log('--- STEP 1: SCRAPE & INGEST (Apify → Google Maps India) ---');
   try {
     if (isDryRun) {
       console.log('DRY RUN: Skipping real scraper call.');
       stats.scraped = 0;
     } else {
-      stats.scraped = await scrapeLeads(category, city, maxLeads);
+      stats.scraped = await scrapeLeads(categoryList, city, maxLeads);
     }
-    console.log(`✅ Step 1 Complete.\n`);
+    console.log(`✅ Step 1 Complete: ${stats.scraped} new leads from Apify.\n`);
   } catch (err) {
-    console.warn(`⚠️  Scraper failed: ${err.message}. Proceeding with existing DB records.\n`);
+    console.error(`❌ Apify scraper failed: ${err.message}`);
+    console.error(`⛔ Stopping pipeline. Cannot evaluate without real scraped data.\n`);
+    return { success: false, stats, topLeads: [], error: `Scraper failed: ${err.message}` };
+  }
+
+  if (!isDryRun && stats.scraped === 0) {
+    console.error(`❌ Apify returned 0 new leads. Stopping pipeline — will NOT evaluate stale data.\n`);
+    return { success: false, stats, topLeads: [], error: 'No new leads scraped from Apify' };
   }
 
   // ─────────────────────────────────────────────
@@ -144,12 +143,12 @@ export async function runPipeline(category, city, maxLeads = 50, options = {}) {
 // CLI Execution
 // ─────────────────────────────────────────────
 if (process.argv[1] && process.argv[1].endsWith('pipeline.js')) {
-  const category = process.argv[2] || 'Cafe';
-  const city     = process.argv[3] || 'Mumbai';
-  const limit    = parseInt(process.argv[4]) || 30;
-  const dryRun   = process.argv.includes('--dry-run');
+  const categories = process.argv[2] ? process.argv[2].split(',') : ['Cafe', 'Salon', 'Photographer'];
+  const city       = process.argv[3] || 'India';
+  const limit      = parseInt(process.argv[4]) || 30;
+  const dryRun     = process.argv.includes('--dry-run');
 
-  runPipeline(category, city, limit, { dryRun })
+  runPipeline(categories, city, limit, { dryRun })
     .then(result => {
       console.log('\nFinal Stats Report:', result.stats);
       process.exit(0);

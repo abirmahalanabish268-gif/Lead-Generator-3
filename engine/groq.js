@@ -20,16 +20,18 @@ const GROQ_TIMEOUT_MS = 15000; // 15 second timeout per call
  */
 export function buildGroqInput(lead) {
   if (!lead || !lead.name || !lead.category) {
-    return null; // Skip invalid records
+    return null;
   }
 
   return {
-    name:         (lead.name || '').trim().toLowerCase(),
-    category:     (lead.category || 'general').trim().toLowerCase(),
-    city:         (lead.city || 'unknown').trim().toLowerCase(),
+    name:         (lead.name || '').trim(),
+    category:     (lead.category || '').trim(),
+    city:         (lead.city || 'unknown').trim(),
     has_website:  Boolean(lead.website && lead.website.trim().length > 0),
     rating:       Math.max(0, parseFloat(lead.rating) || 0),
     review_count: Math.max(0, parseInt(lead.review_count) || 0),
+    address:      (lead.address || '').trim(),
+    phone:        (lead.phone || '').trim(),
   };
 }
 
@@ -77,44 +79,96 @@ async function callGroqAPI(input) {
     throw new Error('Missing GROQ API key.');
   }
 
-  const systemPrompt = `You are a business evaluation engine for a web agency's automated outreach pipeline.
-Evaluate each business lead and return ONLY valid JSON with no markdown, no code blocks, no extra text.
+  const systemPrompt = `You are a senior business development analyst for a web design agency targeting small businesses in India that have NO website.
 
-TARGETING RULES:
-- has_website = false → priority 8–10 (critical target, no online presence)
-- has_website = true + rating > 4.0 + review_count > 50 → priority 5–7 (improvement opportunity)
-- has_website = true, low reviews → priority 1–4 (low priority)
+YOUR MISSION: Analyze each business lead, classify what type of business it is, and decide if it's a promising outreach target for selling a professional website (₹5,000, delivered in 2 days).
 
-SCORING RULES:
-- Use the FULL 1–10 scale. Do NOT cluster all scores at 8.
-- Assign meaningfully based on business potential.
+CRITICAL CONTEXT: The scraper ONLY returns businesses WITHOUT a website. Every lead has no online presence.
+
+STEP 1 — CLASSIFY THE BUSINESS
+Look at the business name, category hint (if any), city, and address. Determine:
+- What kind of business is this? (be specific: "specialty coffee shop", "bridal makeup salon", "wedding photography studio")
+- How much does this business depend on online discovery for revenue?
+- Is this a service business, retail, professional, or other?
+
+STEP 2 — EVALUATE OUTREACH POTENTIAL using these 5 signals:
+
+1. ONLINE PRESENCE GAP (most important)
+   - No website = invisible on Google. This is the #1 pain point.
+   - Popular businesses (high reviews) with no website are GOLDEN — they're clearly successful offline but missing digital reach.
+
+2. WEBSITE IMPACT ON REVENUE
+   - HIGH IMPACT: Cafes, restaurants, salons, photographers, boutiques, bakeries, gyms, spas, clinics, coaching centers — customers search online before visiting.
+   - MEDIUM IMPACT: Retail shops, hardware stores, repair shops — some online search but walk-ins matter more.
+   - LOW IMPACT: Industrial suppliers, wholesalers, B2B services — they operate differently.
+   Only pursue HIGH and MEDIUM impact businesses.
+
+3. ESTABLISHMENT QUALITY
+   - 50+ reviews: Established, likely has budget for a website. HIGH value.
+   - 10-50 reviews: Growing business, good potential.
+   - <10 reviews: May be new or small — lower priority but could need a website more urgently.
+
+4. CITY CONTEXT
+   - Major cities (Mumbai, Delhi, Bangalore, etc.): Fierce competition, a website is survival. HIGH urgency.
+   - Tier-2 cities (Pune, Jaipur, Indore, etc.): Growing market, competitors are getting online. MEDIUM-HIGH urgency.
+   - Smaller cities: Less competition online but growing fast. MEDIUM urgency.
+
+5. BUSINESS SIZE SIGNAL
+   - Phone number listed → more reachable and established.
+   - Address with area details → real physical business.
+   - Category from Google Maps → helps classify the business.
+
+PRIORITY SCORING:
+- 9-10: Popular business (50+ reviews) + high-website-impact category + major city → HOT lead
+- 7-8: Growing business (10-50 reviews) + high-impact category → Strong lead
+- 5-6: Small business + high-impact OR popular + medium-impact → Decent lead
+- 3-4: Small + medium-impact OR sparse data → Weak lead
+- 1-2: Low-impact category or insufficient data → Skip
+
+SHOULD_CONTACT RULE:
+- true: priority >= 5
+- false: priority < 5
 
 MESSAGE RULES:
-- If no website: highlight the missing online presence opportunity.
-- If website exists: highlight the improvement/redesign opportunity.
-- Max 60 words. Sound like a real human BD rep.
+- Reference their business type specifically (e.g., "your salon" not "your business").
+- Explain why THEIR type of business needs a website (e.g., "customers search 'best cafe near me'" for a cafe).
+- Mention they have great reviews — this means they're losing online customers.
+- Keep it under 60 words. Conversational, not salesy.
+- Never say "your business" — always name the type (salon, cafe, studio, clinic, etc.).
+
+STYLE RULES — pick a visual style that matches the business personality:
+- modern: tech, coaching, fitness, dental
+- cozy: cafe, bakery, spa, salon
+- premium: boutique, photography, interior design
+- vibrant: restaurant, gym, entertainment
+- classic: law firm, clinic, traditional shop
+- minimal: studio, agency, freelancer
 
 Required output schema (return ONLY this JSON):
 {
   "should_contact": boolean,
   "priority": integer (1-10),
-  "niche": string,
-  "message": string (max 60 words),
+  "niche": string (specific sub-category you classified, e.g. "specialty coffee" or "bridal salon"),
+  "message": string (max 60 words, personalized outreach mentioning their business type),
   "tagline": string (short catchy phrase for their business, max 10 words),
   "description": string (2-sentence brand description for their business),
   "style": string (one of: modern, classic, cozy, premium, vibrant, minimal),
-  "services": ["string", "string", "string"], // EXACTLY 3 short, business-specific service titles
-  "service_descriptions": ["string", "string", "string"], // EXACTLY 3 short sentences (8-12 words) matching titles
-  "image_keywords": ["string", "string", "string"] // EXACTLY 3 single-word keywords
+  "services": ["string", "string", "string"],
+  "service_descriptions": ["string", "string", "string"],
+  "image_keywords": ["string", "string", "string"]
 }`;
 
-  const userPrompt = `Lead:
+  const userPrompt = `Evaluate this Indian business (NO website — confirmed by Apify scraper):
 Name: ${input.name}
 Category: ${input.category}
-City: ${input.city}
-Has Website: ${input.has_website}
-Rating: ${input.rating}
-Review Count: ${input.review_count}`;
+City: ${input.city}, India
+Address: ${input.address || 'Not available'}
+Phone: ${input.phone || 'Not available'}
+Rating: ${input.rating}/5
+Reviews: ${input.review_count}
+Has Website: false
+
+Is this ${input.category} a good lead for selling a ₹5,000 professional website?`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), GROQ_TIMEOUT_MS);

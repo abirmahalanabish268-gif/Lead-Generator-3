@@ -4,33 +4,41 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { runPipeline } from './pipeline.js';
+import { getCategoryNames } from './ingest.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+const LEAD_LIMIT = 30;
+const DEFAULT_CATEGORIES = [
+  'Cafe', 'Salon', 'Photographer', 'Restaurant', 'Gym',
+  'Dentist', 'Spa', 'Bakery', 'Coaching Center', 'Boutique',
+];
 
 app.use(cors());
 app.use(express.json());
 
-// ── Root Route ──────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.send('🚀 Byters Lead Engine is running. Use the frontend at http://localhost:5173 or check /api/health.');
 });
 
-// ── Serve generated demo sites statically ──────────────────────────────────
-// Files written to /public/demo/*.html are served at /demo/*.html
-// e.g. http://localhost:3000/demo/brew-haven-cafe.html
 const DEMO_DIR = path.resolve(__dirname, '..', 'public', 'demo');
 app.use('/demo', express.static(DEMO_DIR));
 
-// ── Lead Generation Endpoint ───────────────────────────────────────────────
+app.get('/api/categories', (_req, res) => {
+  res.json({ categories: getCategoryNames() });
+});
+
 app.post('/api/generate-leads', async (req, res) => {
   try {
-    const { category = 'Business', city = 'India', limit = 30 } = req.body;
-    console.log(`📡 API: Generate Leads — ${category} in ${city} (max: ${limit})`);
+    const { category, city = 'India' } = req.body;
+    const categories = category
+      ? (Array.isArray(category) ? category : [category])
+      : DEFAULT_CATEGORIES;
+    console.log(`📡 API: Generate Leads — ${categories.join(', ')} in ${city} (exact: ${LEAD_LIMIT})`);
 
-    const result = await runPipeline(category, city, limit);
+    const result = await runPipeline(categories, city, LEAD_LIMIT);
 
     res.json({
       success: true,
@@ -44,7 +52,6 @@ app.post('/api/generate-leads', async (req, res) => {
   }
 });
 
-// ── Health check ───────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -52,4 +59,5 @@ app.get('/api/health', (_req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Byters Lead Engine running → http://localhost:${PORT}`);
   console.log(`📂 Demo sites served at  → http://localhost:${PORT}/demo/<slug>.html`);
+  console.log(`🎯 Fixed limit: ${LEAD_LIMIT} local businesses in India per run`);
 });

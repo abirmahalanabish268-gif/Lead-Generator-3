@@ -14,6 +14,8 @@ export function normalizeLead(rawLead) {
   const phone = (rawLead.phone || '').replace(/\D/g, ''); 
   const category = (rawLead.category || 'General').trim();
   const website = (rawLead.website || '').trim();
+  const rating = parseFloat(rawLead.rating) || null;
+  const review_count = parseInt(rawLead.review_count) || 0;
 
   // website_quality: Forward compatible quality signal
   const website_quality = website ? 'unknown' : 'none';
@@ -40,6 +42,8 @@ export function normalizeLead(rawLead) {
     phone,
     website,
     website_quality,
+    rating,
+    review_count,
     status: 'INGESTED'
   };
 }
