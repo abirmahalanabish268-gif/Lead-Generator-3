@@ -30,7 +30,7 @@ export async function saveNewLead(leadData) {
         city: leadData.city,
         category: leadData.category,
         phone: leadData.phone,
-        status: 'new'
+        status: 'INGESTED'
       }
     ])
     .select()

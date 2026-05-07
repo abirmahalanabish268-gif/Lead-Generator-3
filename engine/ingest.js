@@ -101,6 +101,8 @@ export function getCategoryNames() {
   return Object.keys(CATEGORIES);
 }
 
+const APIFY_HARD_CAP = 5;
+
 export async function scrapeLeads(categories, cities, targetLimit = 30) {
   if (!process.env.APIFY_API_TOKEN) {
     throw new Error("Missing APIFY_API_TOKEN in environment.");
@@ -112,9 +114,9 @@ export async function scrapeLeads(categories, cities, targetLimit = 30) {
     : 'India';
 
   console.log(`\n🔍 Starting Scraper run (INDIA ONLY)...`);
-  console.log(`   Categories: ${categoryList.join(', ')}`);
-  console.log(`   Location: ${locationQuery}`);
-  console.log(`   Target: ${targetLimit} leads`);
+  console.log(` Categories: ${categoryList.join(', ')}`);
+  console.log(` Location: ${locationQuery}`);
+  console.log(` Apify hard cap: ${APIFY_HARD_CAP} | Best-rate target: ${targetLimit} leads`);
 
   const allItems = [];
 
@@ -122,17 +124,21 @@ export async function scrapeLeads(categories, cities, targetLimit = 30) {
     const run = await client.actor("compass/crawler-google-places").call({
       "searchStringsArray": categoryList,
       "locationQuery": locationQuery,
-      "maxCrawledPlacesPerSearch": targetLimit,
+      "maxCrawledPlacesPerSearch": APIFY_HARD_CAP,
       "language": "en",
       "countryCode": "in",
       "website": "withoutWebsite",
     });
 
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
-    console.log(`     Got ${items.length} results`);
-    allItems.push(...items);
+    console.log(` Got ${items.length} results`);
+    const cappedFromApify = items.slice(0, APIFY_HARD_CAP);
+    if (items.length > APIFY_HARD_CAP) {
+      console.log(`✂️ Capped Apify results from ${items.length} to ${APIFY_HARD_CAP}`);
+    }
+    allItems.push(...cappedFromApify);
   } catch (err) {
-    console.error(`     ❌ Scraping failed: ${err.message}`);
+    console.error(` ❌ Scraping failed: ${err.message}`);
   }
 
   console.log(`\n📊 Total from Apify: ${allItems.length} businesses`);
@@ -175,8 +181,9 @@ export async function scrapeLeads(categories, cities, targetLimit = 30) {
   const allDeduplicated = Array.from(uniqueMap.values());
   console.log(`🧹 After dedup: ${allDeduplicated.length} unique Indian businesses`);
 
-  const cappedLeads = allDeduplicated.slice(0, targetLimit);
-  console.log(`✂️  Capping to exactly ${targetLimit} leads (from ${allDeduplicated.length} unique)`);
+  const sortedByRating = allDeduplicated.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  const cappedLeads = sortedByRating.slice(0, targetLimit);
+  console.log(`⭐ Picked top ${cappedLeads.length} best-rated leads (from ${allDeduplicated.length} unique)`);
 
   let savedCount = 0;
   let dbDuplicateCount = 0;
